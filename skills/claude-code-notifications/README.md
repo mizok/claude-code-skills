@@ -2,7 +2,7 @@
 
 Sets up macOS notifications with custom sound and icon for Claude Code hooks.
 
-By default, Claude Code hook notifications on macOS have no sound and use a generic icon. This skill installs [growlrrr](https://github.com/moltenbits/growlrrr) and configures everything interactively — you choose the icon and sound.
+By default, Claude Code has no built-in notification. This skill installs [growlrrr](https://github.com/moltenbits/growlrrr) and configures everything interactively — you choose the icon and sound.
 
 > **macOS only.** Requires Claude Code and Homebrew.
 
