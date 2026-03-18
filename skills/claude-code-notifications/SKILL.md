@@ -136,6 +136,28 @@ Add or replace the `Notification` hook:
 
 Tell the user: go to **System Settings → Notifications → growlrrr** and make sure it's enabled.
 
+## Uninstall
+
+If the user wants to remove everything:
+
+### Step 1 — Remove the Notification hook from `~/.claude/settings.json`
+
+Delete the entire `Notification` entry under `hooks`.
+
+### Step 2 — Remove the custom app
+
+```bash
+grrr apps remove Claude-Code --force
+```
+
+### Step 3 — Uninstall growlrrr (optional)
+
+```bash
+brew uninstall growlrrr && brew untap moltenbits/tap
+```
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |
