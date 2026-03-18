@@ -53,7 +53,10 @@ Follow these steps in order when this skill is invoked:
 
 Ask the user two things (can be in one message):
 
-1. **Icon**: Provide an image URL or local file path for the notification icon (PNG recommended). Or skip to use the default growlrrr icon.
+1. **Icon**: Choose one of the following options:
+   - Provide an image URL or local file path (PNG recommended)
+   - Use the Claude.app icon (if `/Applications/Claude.app` is installed) — Claude will extract it automatically
+   - Skip to use the default growlrrr icon
 2. **Sound**: Which sound do you want?
 
 | Option | Sound |
@@ -87,17 +90,29 @@ growlrrr is not yet signed by an Apple Developer account:
 xattr -cr /Applications/growlrrr.app
 ```
 
-### Step 4 — Download icon (if user provided a URL)
+### Step 4 — Prepare icon
 
-If the user gave a URL, download it:
+**If the user provided a URL**, download it:
 
 ```bash
 curl -fsSL "<URL>" -o /tmp/notification-icon.png
 ```
 
-If the user gave a local path, use it directly.
+**If the user wants the Claude.app icon**, first check it's installed:
 
-If the user skipped, omit `--appIcon` in Step 5.
+```bash
+test -d /Applications/Claude.app && echo "found" || echo "not found"
+```
+
+If found, extract the icon:
+
+```bash
+sips -s format png /Applications/Claude.app/Contents/Resources/electron.icns --out /tmp/notification-icon.png
+```
+
+**If the user gave a local path**, use it directly.
+
+**If the user skipped**, omit `--appIcon` in Step 5.
 
 ### Step 5 — Create custom app
 
