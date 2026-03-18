@@ -103,6 +103,12 @@ grrr apps add --appId Claude-Code --appIcon '/tmp/notification-icon.png'
 grrr apps add --appId Claude-Code
 ```
 
+Then reset macOS Notification Center cache (required to pick up new icon):
+
+```bash
+killall NotificationCenter
+```
+
 ### Step 6 — Test the notification
 
 ```bash
@@ -165,5 +171,5 @@ brew uninstall growlrrr && brew untap moltenbits/tap
 | No notification appears | System Settings → Notifications → growlrrr → enable |
 | Command hangs | Run `xattr -cr /Applications/growlrrr.app` again |
 | `appId` error | appId must use only letters, numbers, hyphens, underscores |
-| Wrong icon showing | Make sure PNG is a valid image file, not an SVG or ICO |
+| Wrong icon showing | macOS caches notification icons — reboot to fully clear the cache |
 | Hook has no effect | Restart Claude Code after editing `settings.json` |
