@@ -103,13 +103,7 @@ grrr apps add --appId Claude-Code --appIcon '/tmp/notification-icon.png'
 grrr apps add --appId Claude-Code
 ```
 
-Then reset macOS Notification Center cache (required to pick up new icon):
-
-```bash
-killall NotificationCenter
-```
-
-> **Tips:** macOS aggressively caches notification icons. If the icon still looks wrong after `killall NotificationCenter`, tell the user: **a reboot is required** to fully clear the cache.
+> **重要提示：** 告訴使用者，如果有設定圖示，macOS 會快取通知圖示，**必須重新開機**才能看到新圖示。
 
 ### Step 6 — Test the notification
 
