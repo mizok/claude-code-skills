@@ -68,7 +68,7 @@ Installation progress:
 - [ ] Install growlrrr
 - [ ] Remove quarantine flag
 - [ ] Prepare icon
-- [ ] Register virtual app identity with macOS Notification Center
+- [ ] Register virtual app identity with macOS Notification Center (requires clicking Allow on macOS prompt)
 - [ ] Test notification
 - [ ] Update settings.json
 - [ ] Grant notification permission
@@ -154,6 +154,9 @@ grrr apps remove Claude-Code --force || true
 ```
 
 Then create fresh:
+
+> **Before running the next command**, warn the user:
+> macOS will show a notification permission prompt in the top-right corner of the screen — **"Claude-Code" Notifications** with an **Options → Allow** button. Click **Allow** before continuing, otherwise the command may hang waiting for a response.
 
 ```bash
 grrr apps add --appId Claude-Code --appIcon '/tmp/notification-icon.png'
