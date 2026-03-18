@@ -57,14 +57,16 @@ Ask the user two things (can be in one message):
 
 ### Step 2 — Install growlrrr
 
-```bash
-brew tap moltenbits/tap && brew install growlrrr
-```
-
-If already installed, skip.
+Check if already installed:
 
 ```bash
 which grrr
+```
+
+If not found, install it. **Tell the user this may take a minute:**
+
+```bash
+brew tap moltenbits/tap && brew install growlrrr
 ```
 
 ### Step 3 — Remove macOS quarantine flag
@@ -136,7 +138,7 @@ Add or replace the `Notification` hook:
 
 ### Step 8 — Grant notification permission (if first time)
 
-If the notification does not appear, tell the user to go to **System Settings → Privacy & Security** and look for a prompt to allow growlrrr to run.
+If the notification does not appear, tell the user to check **System Settings → Privacy & Security** — a prompt to allow growlrrr may appear there.
 
 ## Uninstall
 
