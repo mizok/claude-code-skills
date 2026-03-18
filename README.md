@@ -9,7 +9,7 @@ By default, Claude Code hook notifications on macOS have no sound and use a gene
 ## Installation
 
 ```bash
-npx skills add mizok/claude-code-notifications
+npx skills add mizok/agent-skills --skill claude-code-notifications
 ```
 
 ## Usage
