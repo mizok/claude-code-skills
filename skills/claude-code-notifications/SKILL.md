@@ -109,6 +109,8 @@ Then reset macOS Notification Center cache (required to pick up new icon):
 killall NotificationCenter
 ```
 
+> **Tips:** macOS aggressively caches notification icons. If the icon still looks wrong after `killall NotificationCenter`, tell the user: **a reboot is required** to fully clear the cache.
+
 ### Step 6 — Test the notification
 
 ```bash
