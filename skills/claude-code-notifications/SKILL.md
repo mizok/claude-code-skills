@@ -136,7 +136,7 @@ Add or replace the `Notification` hook:
 
 ### Step 8 — Grant notification permission (if first time)
 
-growlrrr is not signed by an official Apple Developer account. If the notification does not appear, tell the user to go to **System Settings → Privacy & Security** and look for a prompt to allow growlrrr to run.
+If the notification does not appear, tell the user to go to **System Settings → Privacy & Security** and look for a prompt to allow growlrrr to run.
 
 ## Uninstall
 
