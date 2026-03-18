@@ -197,7 +197,7 @@ Add or replace the `Notification` hook:
 
 ### Step 8 — Grant notification permission (if first time)
 
-If the notification does not appear, tell the user to check **System Settings → Privacy & Security** — a prompt to allow growlrrr may appear there.
+If the notification does not appear, tell the user to open **System Settings → Notifications → Claude-Code** and make sure notifications are allowed.
 
 ## Uninstall
 
@@ -238,7 +238,7 @@ brew uninstall growlrrr && brew untap moltenbits/tap
 
 | Problem | Fix |
 |---------|-----|
-| No notification appears | System Settings → Notifications → growlrrr → enable |
+| No notification appears | System Settings → Notifications → Claude-Code → enable |
 | Command hangs | Run `xattr -cr /Applications/growlrrr.app` again |
 | `appId` error | appId must use only letters, numbers, hyphens, underscores |
 | Wrong icon showing | macOS caches notification icons — reboot to fully clear the cache |
