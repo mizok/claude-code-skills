@@ -155,9 +155,6 @@ grrr apps remove Claude-Code --force || true
 
 Then create fresh:
 
-> **Before running the next command**, warn the user:
-> After the command completes, macOS will show a notification permission prompt in the top-right corner of the screen — **"Claude-Code" Notifications** with an **Options → Allow** button. Watch for it and click **Allow** as soon as it appears.
-
 ```bash
 grrr apps add --appId Claude-Code --appIcon '/tmp/notification-icon.png'
 # or without icon:
@@ -166,13 +163,20 @@ grrr apps add --appId Claude-Code
 
 > **Important:** If the user set a custom icon, tell them that macOS caches notification icons — a **reboot is required** for the new icon to appear.
 
+> **Note:** If the user just uninstalled and is immediately reinstalling, there may be an app bundle cache. If `grrr apps add` fails or behaves unexpectedly, a reboot is required before retrying.
+
 ### Step 6 — Test the notification
+
+> **Before running the next command**, warn the user:
+> When the first notification is sent, macOS will show a permission prompt in the top-right corner — **"Claude-Code" Notifications** with an **Options → Allow** button. Watch for it and click **Allow** as soon as it appears.
 
 ```bash
 grrr --appId Claude-Code --title 'Claude Code' --sound <SOUND> 'Claude Code needs your attention'
 ```
 
-Ask the user: did the notification appear with the correct icon and sound?
+Ask the user: did the Allow prompt appear? Did they click Allow?
+
+> **Note:** The test notification itself may not play sound yet. Sound will only work after `settings.json` is updated and Claude Code is restarted (Step 7–8).
 
 ### Step 7 — Update `~/.claude/settings.json`
 
@@ -195,9 +199,11 @@ Add or replace the `Notification` hook:
 }
 ```
 
-### Step 8 — Grant notification permission (if first time)
+### Step 8 — Restart Claude Code and grant notification permission
 
-If the notification does not appear, tell the user to open **System Settings → Notifications → Claude-Code** and make sure notifications are allowed.
+Tell the user:
+1. **Restart Claude Code** — the `settings.json` hook only takes effect after restarting.
+2. If notifications still don't appear, open **System Settings → Notifications → Claude-Code** and make sure notifications are allowed.
 
 ## Uninstall
 
