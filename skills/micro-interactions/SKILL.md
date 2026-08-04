@@ -175,3 +175,10 @@ Load the one you need; do not load all three.
   costume.
 - **Demos are replayable.** A micro-interaction you can only watch once is a
   screenshot with extra steps.
+- **Do not copy the source's constant duplication.** The reference set declares its
+  easing curves and springs separately in every single file, because each file must
+  survive being copied alone into someone else's codebase. That is the price of
+  copy-paste distribution, and it has already cost it drift: one spring exists at four
+  slightly different stiffnesses and one curve under four different names. **If you
+  have a token layer or a theme, put the curves and springs in it once.** Take the
+  values from here; do not take the distribution model.

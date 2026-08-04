@@ -166,8 +166,14 @@ Two more the roster agreed on:
 - **The field owns the border; the input owns nothing.** Put the border on a wrapper
   and make the `<input>` transparent with no outline. That is what lets the shell
   animate its width, or a label float out of it, without the input's own box fighting.
-- **A chip inside a field is filled, never outlined.** A 1px outline on a white chip
-  sitting on a white field is invisible.
+- **A chip inside a field is a cap, not a flat outline.** A 1px outline on a white chip
+  sitting on a white field is invisible — but the answer is not to fill it. The chip
+  gets a border **plus the cap's top highlight** (`inset 0 1.5px 0 rgba(255,255,255,
+  0.95)`), so it reads as lifted out of the recessed well rather than drawn on it.
+  Depth is what makes it visible; the border alone is not.
+  **Filled ink is a state, not the resting look** — it is reserved for armed (about to
+  be deleted) and flashed (rejected duplicate), consistent with §5's rule that
+  selection speaks in ink.
 
 ---
 

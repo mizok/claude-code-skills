@@ -162,9 +162,17 @@ Page-level entrances stagger by block — header 0, preview +0.07, body +0.14, e
 0.34s — because a page that appears fully formed after a refresh reads as a document
 rather than an application.
 
-**Deterministic variation only.** If a cell needs to look random, hash its
-coordinates: `(((i + 1) * 2654435761) % 997) / 997`. `Math.random` makes the server
-and the client disagree about the markup.
+**Deterministic variation only — and under SSR or SSG this is mandatory, not a
+preference.** If a cell needs to look random, hash its index:
+
+```js
+const h = (((i + 1) * 2654435761) % 997) / 997;   // Knuth, for a 0–1 offset
+WIDTHS[(i * 7 + 3) % WIDTHS.length];              // a prime step, for a set
+```
+
+`Math.random` in a render makes the server and the client disagree about the markup,
+which is a hydration mismatch — not a cosmetic difference. Anything prerendered that
+looks random must be a pure function of its position.
 
 ---
 
@@ -242,7 +250,7 @@ float. A 550ms hold drawn in twelve cells costs twelve renders instead of thirty
 long press          12 steps over 550ms
 hold to confirm     20 steps over 1800ms
 reading progress    24 steps
-pinch zoom           8 steps
+zoom readout         8 steps
 swipe commitment     6 steps
 ```
 
@@ -330,8 +338,16 @@ Three traps that come with an auto-animating box:
 ## 8 · Velocity is handed over, never dropped
 
 A gesture that ends and then starts an animation from zero velocity is the single most
-common way to make a drag feel cheap. Every release passes the pointer's velocity into
-the spring that takes over:
+common way to make a drag feel cheap.
+
+**This applies to gestures that commit to a destination** — a drawer that opens or
+closes, a carousel that lands on a slide, a card that is kept or discarded. A gesture
+that merely *positions* something has nowhere to be thrown to: a zoomable image pans
+under the finger and springs back inside its bounds on release, with no velocity term
+at all. Do not add momentum to a gesture that has no commitment to make; it reads as
+the surface sliding away from you.
+
+Where it does apply, pass the pointer's velocity into the spring that takes over:
 
 ```js
 glide(to, velocity)  →  animate(x, to, { ...SPRING, velocity })

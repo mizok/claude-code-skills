@@ -7,8 +7,9 @@ announcements, async and measurement.
 
 ## 1 · Reserving space — the invisible twin
 
-Invariant 1 says every reachable state reserves its space up front. In practice that
-is one technique, used everywhere.
+Invariant 1 says every reachable state reserves its space up front. In practice this is
+**the** reservation primitive — not one option among several. Reach for it first and
+fall back to a fixed box only when the widest state is not renderable.
 
 Put an invisible copy of the **widest state the box can ever hold** in the same grid
 cell as the live content. It sizes the column once; the live content is drawn over it.
@@ -28,7 +29,15 @@ width, longest number    a counter that will reach 3 digits
 width, longest string    "12 min left" at its maximum
 FONT WEIGHT              an invisible *medium* twin under a regular label, so
                          going bold on selection cannot reflow the column
+PROGRESSIVE TEXT         the whole string, invisible, with the revealed slice
+                         drawn over it — so a paragraph that types itself out
+                         never reflows the page as it grows
 ```
+
+The progressive-text case is the same idea at its most useful. A streaming or
+revealing text effect that grows its own box relayouts everything below it on every
+tick; laying the finished string underneath at zero opacity fixes the box on the first
+frame and the reveal happens inside it.
 
 The weight case is the subtle one. A row whose label goes from regular to medium when
 selected gets **wider**. In a vertical rail that means the whole column reflows as you
@@ -238,6 +247,11 @@ value flash          700ms   the number that stayed
 presence avatars     900ms   four people joining at once is one sentence
 ```
 
+**500ms is the default; deviate only with a reason.** It is the value repeated verbatim
+across most of the set. Go shorter (420ms) when the stream stops crisply and the user
+is waiting on the answer; go longer (700–900ms) when several events can legitimately
+arrive together and you want them collapsed into one sentence rather than three.
+
 **Announce once.** Key a `Set` on `${id}:${status}` — one announcement per message, and
 one more when it resolves. Clear the set past a bound so a long session cannot leak.
 
@@ -273,6 +287,13 @@ an empty state. Until then the status is `waiting`, which draws **nothing at all
 **A minimum — so a fast response does not strobe.** Wait 120ms before showing a
 skeleton, *and* keep it up for at least 380ms once shown. A 200ms request never sees a
 skeleton; a 400ms one sees a complete one.
+
+**The skeleton's box is sized by props, not by its content.** `height = reserve ??
+lines * lineHeight`, set on the wrapper, with the content scrolling inside if it
+overruns. The skeleton and the real content therefore occupy the same box by
+construction — which is invariant 1 applied to the one place it is easiest to forget,
+because at skeleton time you do not yet know how tall the content will be. Guessing
+from the skeleton's own rows would make the box jump the moment real text arrives.
 
 **The skeleton itself does not move.** No shimmer, no sweep, no pulse — a flat block
 in the surface's own neutral, and the only animation in the whole component is the
@@ -310,6 +331,33 @@ Two more:
 - **Per-item progress, never one global bar.** A concurrency-2 queue where each row
   owns its own `AbortController`, its own progress value and its own fill. Removing a
   row aborts it; unmounting aborts everything.
+
+### Images are an async state too
+
+Two details that look like animation polish and are actually correctness. Both are the
+difference between a fade that helps and a fade that lies.
+
+**A cached image must skip the fade entirely.** Check before you animate:
+
+```js
+const cached = img.complete && img.naturalWidth > 0;   // both, not just complete
+```
+
+`complete` alone is true for a failed load as well, which is why the natural width is
+checked with it. A cached image that fades in is animating a transition that did not
+happen — the user sees a delay you invented, on the fastest path you have.
+
+**Reveal after decode, not after load.** `load` fires when the bytes have arrived, not
+when the pixels are ready. Painting there means the browser decodes a full-size image
+on the frame you asked it to appear, and that is a dropped frame you can see:
+
+```js
+if (typeof img.decode === "function") img.decode().then(reveal, fail);
+else reveal();                                          // older browsers
+```
+
+Always keep the fallback path and a failure branch — `decode()` rejects on a broken
+image, and a reveal that never fires is worse than an ugly one.
 
 ---
 
@@ -373,6 +421,19 @@ step rail            evenly spaced → the head travels on a percentage translat
 segmented control    grid-template-columns: repeat(n, 1fr) → thumb x = i * 100%
 carousel             one slide width, read once; everything else is arithmetic
 ```
+
+**The test: can the position be derived from props and constants alone?** If yes, it is
+arithmetic and you must not measure. If no, measure — but measure once and cache.
+
+The same widget answers this both ways depending on its sizing, which is why it is a
+test and not a preference. A **single sliding indicator** under a row of items is
+arithmetic when the items are equal width (`x = i * slot`, from a grid template you
+already control), and requires a real `offsetLeft` read when the items are sized by
+their own content — because then only layout knows where item *i* starts. Equal-width
+segmented controls and pagination take the first path; content-width tabs take the
+second. Reaching for measurement on the equal-width case buys you a `ResizeObserver`,
+an epsilon guard and a class of subpixel bugs, in exchange for a number you already
+knew.
 
 The trick worth stealing: an inverted label inside a moving thumb is **not** a second
 copy positioned per option. It is the whole row of labels, drawn once inside the thumb
