@@ -12,9 +12,12 @@ set -euo pipefail
 LABEL="com.claude-code.autoupdate"
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
 SCRIPT="$HOME/.local/bin/claude-code-updater"
+LEGACY_SCRIPT="$HOME/.local/bin/claude-code-autoupdate.sh"
 LOG="$HOME/.claude/autoupdate.log"
 ERR_LOG="$HOME/.claude/autoupdate-error.log"
 LOCKDIR="$HOME/.claude/autoupdate.lock"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+UPDATER_SOURCE="$SCRIPT_DIR/updater.sh"
 
 # ── Colours ──────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
@@ -26,85 +29,66 @@ warn()    { echo -e "${YELLOW}⚠ $*${RESET}"; }
 error()   { echo -e "${RED}✗ $*${RESET}" >&2; }
 die()     { error "$*"; exit 1; }
 
+# ── Install mode detection ────────────────────────────────────────────────────
+detect_install_mode() {
+  # Native install: ~/.local/share/claude/versions exists
+  if [ -d "$HOME/.local/share/claude/versions" ]; then
+    echo "native"
+    return 0
+  fi
+  # Homebrew Cask fallback
+  local brew_bin=""
+  for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    if [ -x "$brew_bin" ] && "$brew_bin" list --cask claude-code >/dev/null 2>&1; then
+      echo "homebrew"
+      return 0
+    fi
+  done
+  echo "none"
+}
+
+find_claude_bin() {
+  for p in "$HOME/.local/bin/claude" /usr/local/bin/claude; do
+    [ -x "$p" ] && printf '%s\n' "$p" && return 0
+  done
+  command -v claude 2>/dev/null || true
+}
+
 # ── Preflight checks ─────────────────────────────────────────────────────────
 preflight() {
   [[ "$(uname -s)" == "Darwin" ]] || die "This script only works on macOS."
   [[ "$(id -u)" -ne 0 ]] || die "Do not run as root."
-  command -v brew >/dev/null 2>&1 || die "Homebrew not found. Install from https://brew.sh first."
-  brew list --cask claude-code >/dev/null 2>&1 \
-    || die "Claude Code is not installed via Homebrew Cask.\nRun: brew install --cask claude-code"
+
+  local mode
+  mode="$(detect_install_mode)"
+
+  case "$mode" in
+    native)
+      success "Detected native Claude Code install (~/.local/share/claude)"
+      ;;
+    homebrew)
+      warn "Detected Homebrew Cask install (legacy). Native install is recommended."
+      warn "To switch: claude install (or reinstall via https://claude.ai/download)"
+      ;;
+    none)
+      die "Claude Code not found.\nNative install: https://claude.ai/download\nHomebrew: brew install --cask claude-code"
+      ;;
+  esac
 }
 
 # ── Write the updater script ──────────────────────────────────────────────────
 write_updater_script() {
   mkdir -p "$(dirname "$SCRIPT")"
-  cat > "$SCRIPT" << 'UPDATER'
-#!/bin/bash
-# Claude Code Auto-Updater
-
-LOG="$HOME/.claude/autoupdate.log"
-LOCKDIR="$HOME/.claude/autoupdate.lock"
-
-ts() { date "+%Y-%m-%d %H:%M:%S"; }
-
-# Locate Homebrew using absolute paths (launchd has minimal PATH)
-BREW_BIN=""
-for _b in /opt/homebrew/bin/brew /usr/local/bin/brew; do
-  if [ -x "$_b" ]; then BREW_BIN="$_b"; break; fi
-done
-if [ -z "$BREW_BIN" ]; then
-  echo "[$(ts)] ERROR: Cannot find brew binary. Checked /opt/homebrew and /usr/local." >> "$LOG"
-  exit 1
-fi
-BREW_PREFIX="$($BREW_BIN --prefix 2>/dev/null)"
-export PATH="$BREW_PREFIX/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
-
-# Prevent overlapping runs
-if ! mkdir "$LOCKDIR" 2>/dev/null; then
-  echo "[$(ts)] Skipping — another instance is already running" >> "$LOG"
-  exit 0
-fi
-trap 'rm -rf "$LOCKDIR"' EXIT INT TERM
-
-echo "[$(ts)] Checking for Claude Code updates..." >> "$LOG"
-
-# Refresh Homebrew index
-if ! $BREW_BIN update --quiet 2>> "$LOG"; then
-  echo "[$(ts)] WARNING: brew update failed, continuing with cached index" >> "$LOG"
-fi
-
-# Check if outdated (--greedy handles casks with auto_updates true)
-OUTDATED=$($BREW_BIN outdated --cask --greedy 2>/dev/null | grep "^claude-code" || true)
-
-if [ -z "$OUTDATED" ]; then
-  CURRENT=$($BREW_BIN list --cask --versions claude-code 2>/dev/null \
-    | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
-  echo "[$(ts)] Up-to-date: $CURRENT" >> "$LOG"
-  exit 0
-fi
-
-# Parse versions for display only — non-critical
-CURRENT=$(echo "$OUTDATED" | grep -oE '\([0-9]+\.[0-9]+\.[0-9]+\)' \
-  | tr -d '()' | head -1 || echo "unknown")
-LATEST=$(echo "$OUTDATED" | awk '{print $NF}' | head -1 || echo "unknown")
-
-echo "[$(ts)] Update available: $CURRENT → $LATEST" >> "$LOG"
-$BREW_BIN upgrade --cask --greedy claude-code >> "$LOG" 2>&1
-
-if [ $? -eq 0 ]; then
-  echo "[$(ts)] Successfully updated to $LATEST" >> "$LOG"
-  # Desktop notification (requires claude-code-notifications skill)
-  if command -v grrr &>/dev/null; then
-    grrr --appId Claude-Code --title "Claude Code Updated" \
-      "Updated $CURRENT → $LATEST" 2>/dev/null || true
-  fi
-else
-  echo "[$(ts)] Update FAILED — see log for details" >> "$LOG"
-  exit 1
-fi
-UPDATER
-
+  [[ -f "$UPDATER_SOURCE" ]] || die "Updater source not found: $UPDATER_SOURCE"
+  cp "$UPDATER_SOURCE" "$SCRIPT"
   chmod +x "$SCRIPT"
+}
+
+remove_legacy_script() {
+  [[ -f "$LEGACY_SCRIPT" ]] || return 0
+  info "Removing legacy updater script..."
+  rm -f "$LEGACY_SCRIPT"
+  success "Legacy updater script removed"
 }
 
 # ── Write the LaunchAgent plist ───────────────────────────────────────────────
@@ -166,15 +150,11 @@ cmd_install() {
   echo -e "${BOLD}Claude Code Auto-Update Setup${RESET}"
   echo "────────────────────────────────"
 
-  # Warn if claude binary is not from Homebrew
-  local claude_path brew_prefix
-  claude_path=$(command -v claude 2>/dev/null || true)
-  brew_prefix=$(brew --prefix 2>/dev/null || true)
-  if [[ -n "$claude_path" && -n "$brew_prefix" ]] \
-      && [[ "$claude_path" != "$brew_prefix"* ]]; then
-    warn "Active 'claude' ($claude_path) is not under Homebrew prefix."
-    warn "The cask will be updated correctly, but your PATH may still resolve the old binary."
-    echo ""
+  # Warn if active claude binary path looks unexpected
+  local claude_bin
+  claude_bin="$(find_claude_bin)"
+  if [ -n "$claude_bin" ]; then
+    info "Using claude at: $claude_bin"
   fi
 
   # Ask for time
@@ -185,7 +165,7 @@ cmd_install() {
   if ! [[ "$time_input" =~ ^([0-9]{1,2}):([0-9]{2})$ ]]; then
     die "Invalid time format. Use HH:MM (e.g. 09:00)"
   fi
-  hour="${BASH_REMATCH[1]#0}"   # strip leading zero to avoid octal
+  hour="${BASH_REMATCH[1]#0}"
   minute="${BASH_REMATCH[2]#0}"
   hour="${hour:-0}"
   minute="${minute:-0}"
@@ -201,7 +181,8 @@ cmd_install() {
   # Write updater script
   info "Writing updater script to $SCRIPT..."
   write_updater_script
-  success "Updater script created"
+  success "Updater script written"
+  remove_legacy_script
 
   # Write plist
   info "Writing LaunchAgent plist..."
@@ -248,15 +229,34 @@ cmd_status() {
   fi
 
   echo ""
-  echo -e "${BOLD}Version check:${RESET}"
-  if brew outdated --cask --greedy 2>/dev/null | grep -q "^claude-code"; then
-    warn "Update available! Run: brew upgrade --cask --greedy claude-code"
-  else
-    local current
-    current=$(brew list --cask --versions claude-code 2>/dev/null \
-      | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "unknown")
-    success "Up-to-date: $current"
-  fi
+  echo -e "${BOLD}Install mode & version:${RESET}"
+  local mode
+  mode="$(detect_install_mode)"
+  case "$mode" in
+    native)
+      local claude_bin current
+      claude_bin="$(find_claude_bin)"
+      current="$("$claude_bin" --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo 'unknown')"
+      success "Native install | Current: $current"
+      info "Binary: $claude_bin"
+      ;;
+    homebrew)
+      local brew_bin current
+      for brew_bin in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+        [ -x "$brew_bin" ] && break
+      done
+      current="$("$brew_bin" list --cask --versions claude-code 2>/dev/null \
+        | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo 'unknown')"
+      if "$brew_bin" outdated --cask --greedy 2>/dev/null | grep -q "^claude-code"; then
+        warn "Homebrew install | Update available! Run: brew upgrade --cask --greedy claude-code"
+      else
+        success "Homebrew install | Up-to-date: $current"
+      fi
+      ;;
+    none)
+      warn "Claude Code not detected"
+      ;;
+  esac
 
   echo ""
   echo -e "${BOLD}Last 20 log lines:${RESET}"
@@ -275,13 +275,12 @@ cmd_now() {
     die "Auto-updater is not installed. Run $(basename "$0") first."
   fi
 
-  info "Triggering update check via launchd..."
-  launchctl kickstart -k "gui/$(id -u)/$LABEL"
+  info "Running update check now (this may take ~30s while checking online)..."
+  echo ""
+  # Run the updater script directly so output is visible in real-time.
+  # launchctl kickstart runs in the background and the check can take ~30s.
+  "$SCRIPT" && echo "" || true
 
-  echo ""
-  info "Waiting for result..."
-  sleep 4
-  echo ""
   echo -e "${BOLD}Last 10 log lines:${RESET}"
   tail -10 "$LOG" 2>/dev/null || echo "  (log not found — check $ERR_LOG)"
 }
@@ -301,6 +300,7 @@ cmd_uninstall() {
 
   info "Removing updater script..."
   rm -f "$SCRIPT"
+  rm -f "$LEGACY_SCRIPT"
   rm -rf "$LOCKDIR" 2>/dev/null || true
   success "Script removed"
 

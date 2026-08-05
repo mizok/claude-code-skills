@@ -7,11 +7,20 @@ description: Use when the user wants to set up automatic daily Claude Code versi
 
 ## Overview
 
-Sets up a macOS LaunchAgent that checks for new Claude Code versions daily via Homebrew and upgrades automatically. Powered by `install.sh` in this skill directory — no manual steps needed.
+Sets up a macOS LaunchAgent that checks for new Claude Code versions daily and upgrades automatically. Supports the **native install** (current default) and falls back to Homebrew Cask for legacy setups.
 
-> **Requirements:** macOS, Homebrew, Claude Code installed via `brew install --cask claude-code`
+> **Requirements:** macOS, Claude Code installed (native install at `~/.local/share/claude` **or** via `brew install --cask claude-code`)
 
-> **Security note:** This enables automatic remote upgrades. Homebrew verifies cask checksums, but auto-upgrades are a supply-chain trust decision. Users who prefer to upgrade manually can skip the scheduler and use `--now` on demand instead.
+> **Security note:** This enables automatic remote upgrades. Native installs use `claude update` (Anthropic's official updater). Homebrew installs use `brew upgrade --cask --greedy`. Auto-upgrades are a supply-chain trust decision — users who prefer to upgrade manually can skip the scheduler and use `--now` on demand.
+
+---
+
+## Install modes
+
+| Mode | Detection | Update command |
+|------|-----------|----------------|
+| **Native** (recommended) | `~/.local/share/claude/versions/` exists | `claude update` |
+| **Homebrew** (legacy) | `brew list --cask claude-code` succeeds | `brew upgrade --cask --greedy claude-code` |
 
 ---
 
@@ -39,8 +48,8 @@ Locate `install.sh` in the same directory as this skill, then run:
 
 | Command | Action |
 |---------|--------|
-| `./install.sh` | Preflight checks → asks for daily time → writes `~/.local/bin/claude-code-autoupdate.sh` → registers LaunchAgent |
-| `--status` | Shows LaunchAgent state, current version, last 20 log lines |
+| `./install.sh` | Preflight checks → detects install mode → asks for daily time → writes `~/.local/bin/claude-code-updater`, removes legacy script, registers LaunchAgent |
+| `--status` | Shows LaunchAgent state, install mode, current version, last 20 log lines |
 | `--now` | Kicks off an immediate check via `launchctl kickstart` (same env as scheduled job) |
 | `--uninstall` | Unregisters LaunchAgent, removes plist and script; keeps log files |
 
@@ -58,15 +67,23 @@ bash /path/to/skills/claude-code-auto-update/install.sh
 
 If you need to pass a time non-interactively (e.g. user said "every day at 8am"), the script is interactive — just run it and answer the prompt with the user's chosen time.
 
+To reinstall (e.g. after switching from Homebrew to native install):
+
+```bash
+bash /path/to/skills/claude-code-auto-update/install.sh --uninstall
+bash /path/to/skills/claude-code-auto-update/install.sh
+```
+
 ---
 
 ## Troubleshooting
 
 | Problem | Fix |
 |---------|-----|
-| `brew --prefix` fails | Homebrew may be broken — run `brew doctor` |
+| `claude` not found | Native install may not be in PATH for LaunchAgent — the script adds `~/.local/bin` automatically |
 | LaunchAgent not registered after install | Run `./install.sh --uninstall` then reinstall |
 | `--now` hangs or produces no log | Check `~/.claude/autoupdate-error.log` |
 | Lock dir stuck after crash | `rm -rf ~/.claude/autoupdate.lock` |
-| `claude` shows old version after update | Check `command -v claude` — PATH may point to a non-Homebrew install |
-| Cask skips upgrade | Script uses `--greedy` to force-check casks with `auto_updates true` |
+| Native: `claude` shows old version after update | Check symlink: `ls -la ~/.local/bin/claude` — should point to new version |
+| Homebrew: cask skips upgrade | Script uses `--greedy` to force-check casks with `auto_updates true` |
+| Legacy updater still running | Run `./install.sh --uninstall` then `./install.sh` to migrate to new version |
