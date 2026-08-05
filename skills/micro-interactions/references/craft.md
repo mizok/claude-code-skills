@@ -173,6 +173,41 @@ Two more that are easy to miss:
 - **`touch-action`, chosen by the axis you own.** `manipulation` on a button (kills the
   300ms delay, keeps scrolling); `pan-y` on a horizontal drag (the page still scrolls
   vertically); `none` on a two-dimensional gesture where you own both axes.
+- **Left button only.** A right-click or a middle-click must not start a gesture. One
+  check at pointer-down, and the context menu still works.
+
+### Abandonment is a phase, not an event
+
+The listener set above tells you *when* a press stops being a press. It does not tell you
+what the component does next, and "snap back to zero" is almost always the wrong answer.
+
+A gesture that accumulates something — a hold filling, a swipe committing, a slider being
+dragged — should **drain** rather than reset:
+
+```
+idle  →  holding  →  releasing  →  committed
+             ↖________↙
+      pressing again before the drain finishes resumes from where it is
+```
+
+Two things follow from modelling `releasing` as a real phase rather than as the absence of
+`holding`:
+
+**The drain has its own rate, and it is faster than the fill.** ~2.5× is the worked value
+for a hold: quick enough that letting go feels like it did something, slow enough that the
+evidence of the attempt is not erased between two frames. Instant reset reads as the
+component denying that anything happened.
+
+**It restores invariant 2 to a dimension people forget.** Interruptibility is usually
+discussed as position — an element resuming its travel. Here the interrupted quantity is
+*progress*, and the requirement is identical: press again during the drain and the fill
+carries on from where it actually is, never from zero. A hold that restarts from empty
+because you flinched is the same defect as an animation that restarts from its first
+frame.
+
+The corollary is that **`committed` must be its own phase too**, distinct from
+`holding` at 100%. Otherwise a component that has already fired its action is still
+sitting in a state that can accept another pointer-down.
 
 ---
 
@@ -190,7 +225,15 @@ zoomable image    +/− zoom, arrows pan, 0 returns home
 carousel          ←→ move, Home/End to the ends
 tabs / segments   ←→ ↑↓ move, Home/End to the ends, Enter/Space commits
                   (see "activation", below)
+hold to confirm   Space/Enter DOWN begins the hold, keyup releases, Escape aborts
 ```
+
+The hold is the awkward one and it is the one most often left as a plain button. A hold
+is a gesture with **duration**, so its keyboard equivalent has to be held too: start on
+`keydown`, drain on `keyup`, and abort on Escape. Guard against key repeat — a held key
+fires `keydown` continuously, and a handler that restarts the timer on each one never
+advances. Announce the hint through `aria-describedby` (§6) or a keyboard user has no way
+to learn that the key must be held at all.
 
 Every one of them announces what it did — see §6.
 
@@ -355,6 +398,39 @@ Two more:
 - **Per-item progress, never one global bar.** A concurrency-2 queue where each row
   owns its own `AbortController`, its own progress value and its own fill. Removing a
   row aborts it; unmounting aborts everything.
+
+### Determinate and indeterminate are one component, two modes
+
+A meter that does not know its total is not a meter at zero. Model the absence as a real
+value — `value: number | null`, where `null` **is** "unknown" — rather than as a second
+component or a boolean flag beside a number that is then meaningless.
+
+The part that is easy to get wrong is the ARIA, and it is wrong in a way no visual review
+catches:
+
+```
+determinate     aria-valuenow  aria-valuetext  aria-valuemin  aria-valuemax
+indeterminate   aria-valuenow OMITTED ENTIRELY — not 0, not ""
+```
+
+`role="progressbar"` with a missing `aria-valuenow` is the defined way to say "in progress,
+amount unknown". Setting it to `0` says something different and false: that the operation
+has measurably done nothing. A screen reader will read "0 percent" for the entire duration
+of a request that is going fine.
+
+`aria-valuetext` is what carries a unit the number cannot — "3 of 12 files", "40 seconds
+remaining". Without it a percentage is the only thing announced, which is the least useful
+framing of most progress.
+
+**Visually, indeterminate keeps the bar's shape and moves something inside it.** The shape
+says "this is progress"; the movement says "the duration is unknown". This is the one loop
+in a progress component that survives the ban on idle animation (`visual-language.md` §3),
+and it survives it for the stated reason — it is bound to a live in-flight operation and
+stops when the operation does. It must not be reused as decoration on a determinate bar,
+where the fill already reports everything.
+
+The readout follows `content-change.md`: the pending label and the percentage are two
+copies in one grid cell, crossfading, with the cell reserved against the wider of the two.
 
 ### Images are an async state too
 
