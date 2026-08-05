@@ -119,6 +119,41 @@ Where the two states are *labels* rather than values, the cell must be reserved 
 the longest one — the invisible twin, `craft.md` §1. The roll does not exempt you from
 reserving space; it makes it more urgent, because both copies are in the box at once.
 
+### The blur needs its own curve, and this is the trap
+
+Give opacity, transform and blur one shared `ARRIVE` and **the blur will not be there**.
+That curve starts almost vertically — it is built to cover most of the distance immediately
+and spend the rest of its time settling — so anything riding it is effectively finished in
+the first fifth of the duration. Measured on a 320ms entrance sharing one curve:
+
+```
+              50ms      160ms (midpoint)   320ms
+blur          ~1.2px    0.17px             0
+```
+
+Nobody registers 0.17px. The swap reads as a hard cut with a faint smear at the very start,
+which is exactly the "I cannot see the two messages overlapping" complaint.
+
+**Lengthening the animation does not fix it.** What is fast is the curve, not the time — at
+double the duration the blur is still gone by the same *fraction* of the way through. The fix
+is to run the blur as a **separate animation on a linear track**:
+
+```
+opacity + transform   ARRIVE     — arrive fast, settle
+blur                  linear     — dissipate evenly across the whole duration
+```
+
+Same duration, same start value, and now the midpoint reads 2.5px instead of 0.17px.
+
+Two animations on one element are safe as long as they touch **disjoint properties**; if both
+touch opacity, the later declaration silently wins and you have a different bug.
+
+**Position is the opposite case and correctly keeps `ARRIVE`.** The travel *should* finish
+early. What produces the sense of settling is precisely the gap: the message has stopped
+moving and gone fully opaque while it is still resolving out of blur. Put the blur on the
+same curve and you collapse that gap — everything lands at once, which is what "appears"
+looks like as opposed to "settles".
+
 ---
 
 ## 5 · Enter is a spring, exit is a tween
@@ -261,6 +296,7 @@ string** — never a faster reveal.
 - [ ] Set the value to what it already is. Does anything animate? → §2
 - [ ] Change it through a width boundary (`9 → 10`, `99 → 100`). Did the box move? → §4
 - [ ] Change it twice within 100ms. Two copies, or four? → §8
+- [ ] Pause it at the midpoint of the swap. Is the blur still visible, or already gone? → §4
 - [ ] Read it with a screen reader mid-change. Does it say the old value, or both? → §6
 - [ ] Make it go down. Does the content move downward? → §3
 - [ ] Set the font size to 27px. Is the travel still proportionate? → §4
