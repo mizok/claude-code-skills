@@ -1,6 +1,6 @@
 ---
 name: micro-interactions
-description: Use when building, animating, or reviewing any interactive UI — buttons, fields, modals, drawers, toasts, tabs, dropdowns, carousels, drag/swipe/hold gestures, loading and async states — or whenever a component moves, appears, disappears, changes the text or number it is showing, or reports progress. Enforces the last twenty percent: zero layout shift, interruptible motion, the right spring for the distance, content that is replaced rather than rewritten in place, the full gesture-abandonment surface, keyboard parity, screen-reader announcements, and reduced-motion behaviour. Framework-agnostic.
+description: Use when building, animating, or reviewing any interactive UI — buttons, fields, modals, drawers, toasts, tabs, dropdowns, carousels, OTP and code inputs, drag/swipe/hold gestures, loading, progress and async states — or whenever a component moves, appears, disappears, changes the text or number it is showing, reports progress, or rejects what someone typed. Enforces the last twenty percent: zero layout shift, interruptible motion, the right spring for the distance, content that is replaced rather than rewritten in place, a real native input kept underneath any custom-looking field so autofill and IME survive, error and rejection feedback that is not carried by motion alone, the full gesture-abandonment surface, keyboard parity, screen-reader announcements, and reduced-motion behaviour. Framework-agnostic.
 ---
 
 # Micro-Interactions
