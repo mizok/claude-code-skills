@@ -149,6 +149,8 @@ maps to a section.
 - [ ] Start a drag/hold, then Alt-Tab away. Is it stuck? → craft §4
 - [ ] Unplug the mouse. Can you reach and operate it? Does it announce what
       happened, once, in a sentence? → craft §5, §6
+- [ ] On tabs / segments / any roving selection: arrow from the first item to the
+      last. Did every item in between get *selected* on the way past? → craft §5
 - [ ] Turn on Reduce Motion. Does the information still arrive, or did the element
       vanish / stop working? → motion §6
 - [ ] On a prerendered page: hard-reload and watch the first paint. Does anything

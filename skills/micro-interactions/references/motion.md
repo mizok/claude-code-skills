@@ -294,6 +294,35 @@ A scroll-driven component can go further:
 derive every value from the scroll position with a transform, and the framework
 renders once, at the threshold.
 
+### The same trick works on a discrete transition
+
+The per-frame case is the obvious one, but a **one-off transition between two states**
+can leave the framework out entirely, and the pattern is worth recognising because it
+looks like it needs state and does not:
+
+```js
+const pos = motionValue(index);          // an animatable value the framework does not own
+animate(pos, index, CELL);               // the spring drives it
+const thumbX = transform(pos, v => `${v * 100}%`);
+const maskX  = transform(pos, v => `${v * -100}%`);   // the counter-translate, craft §9
+```
+
+Selection changes → **one** render, to set the new index. The slide itself is zero. The
+derived values (`thumbX`, `maskX`) are two views of one truth, so the thumb and the label
+inverting inside it cannot disagree — there is no second copy to keep in sync and no
+frame on which they could be out of step.
+
+The requirement is that **the position is arithmetic** (`craft.md` §9): equal-width slots
+mean `i * 100%` is the whole computation, so nothing has to be measured and nothing has to
+be read back. Where the geometry must be measured instead, the measurement lands in state
+and a render is unavoidable — which is the real reason a content-width tab strip is a more
+expensive component than an equal-width segmented control, even though they look the same.
+
+Unlike the per-frame case this is an **optimisation, not an invariant**. A segmented
+control that re-renders on selection is wasteful, not broken. Reach for it when the
+component is on a hot path or when the two derived values must never disagree; do not
+contort a simple component to avoid one render.
+
 ---
 
 ## 5 · Quantisation is a render budget, not a look

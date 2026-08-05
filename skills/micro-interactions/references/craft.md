@@ -188,9 +188,33 @@ slider w/ detents arrows step, Shift/PageUp/PageDown jump detent to detent
 card deck         ←→ decide, Backspace undoes
 zoomable image    +/− zoom, arrows pan, 0 returns home
 carousel          ←→ move, Home/End to the ends
+tabs / segments   ←→ ↑↓ move, Home/End to the ends, Enter/Space commits
+                  (see "activation", below)
 ```
 
 Every one of them announces what it did — see §6.
+
+### Roving selection: automatic or manual activation
+
+Any roving-tabindex widget — tabs, a segmented control, a listbox — has to answer one
+question that is invisible until it is wrong: **does moving the focus also change the
+selection?**
+
+```
+automatic   arrow moves focus AND selects.        Enter/Space are no-ops.
+manual      arrow moves focus only. Enter/Space commit.
+```
+
+Automatic is the better default because it is fewer keystrokes and it matches what a
+mouse does. **It becomes a bug the moment selecting is expensive or destructive.**
+Arrowing from the first tab to the fourth under automatic activation mounts, fetches and
+discards two panels on the way past — a keyboard user pays a cost a mouse user never
+does, which is the exact inversion of what keyboard parity is for.
+
+The rule: **automatic when the panel is already there; manual when selecting causes work.**
+Expose it (`activation: "automatic" | "manual"`) rather than deciding once for every
+consumer, and make the choice visible — under manual activation the focused-but-unselected
+item needs its own resting mark, or the user is moving a cursor they cannot see.
 
 ### Focus, three shapes
 
