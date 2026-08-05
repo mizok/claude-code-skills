@@ -153,6 +153,10 @@ maps to a section.
       last. Did every item in between get *selected* on the way past? → craft §5
 - [ ] Turn on Reduce Motion. Does the information still arrive, or did the element
       vanish / stop working? → motion §6
+- [ ] Turn on Reduce Motion and submit something invalid. Did the rejection still
+      arrive without the shake? → motion §9
+- [ ] On any custom-looking field: does autofill still target it? Does an IME still
+      compose into it? → craft §10
 - [ ] On a prerendered page: hard-reload and watch the first paint. Does anything
       above the fold fade in *again* after hydration? → motion §2
 - [ ] Open two overlays. Does one Escape close one, or three? → craft §3

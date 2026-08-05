@@ -544,3 +544,83 @@ crossfading with a duplicate.
 Where a measurement is unavoidable and expensive, take it **once per gesture, not per
 frame**: read every rect you need at pointer-down, cache it, then let the move handler
 do pure arithmetic against the cache and write one transform.
+
+---
+
+## 10 · Native controls, and inputs split across cells
+
+### Never replace a native control to style it. Stop it painting and draw beside it.
+
+The temptation with any custom-looking input is to render a `div` and manage the text
+yourself. Everything you lose doing that is invisible in a demo and load-bearing in
+production:
+
+```
+IME / composition       Japanese, Chinese, Korean input needs a real input
+autofill                password managers and OS autofill target real inputs
+one-time-code           SMS autofill only exists on a real input
+mobile keyboard         inputMode, enterKeyHint, autocapitalise all live there
+form participation      submit, reset, validation, FormData
+a11y semantics          the whole role and state model, for free
+```
+
+The pattern that keeps all of it:
+
+```
+the real <input>   present, focusable, functional — but text-transparent and
+                   caret-transparent, so it paints nothing
+a sibling <span>   aria-hidden, draws the character and does the animation
+a custom caret     drawn only because the native one was hidden
+```
+
+The input stays the source of truth and the accessibility tree stays correct; the visual
+layer is decoration over it. **This is `content-change.md` §6 with the layers swapped** —
+there, the animated copy is hidden and a plain node carries the truth; here, the *truth is
+a native element* and the animated copy sits beside it. Same principle: one node for the
+machine, one for the eye, never one node doing both.
+
+`visual-language.md` §4's "the field owns the border; the input owns nothing" is the
+visual half of this rule. This is the half that says *why you may not replace the input at
+all*.
+
+### Autofill is a one-line defect
+
+```
+autoComplete="one-time-code"   on the FIRST cell only
+```
+
+On every cell it does not degrade — **it breaks**. The platform fills a code into one
+target, and six competing targets is not a target. This class of bug survives code
+review, desktop testing and every automated check you have; it is only ever found by
+someone receiving a real text message on a real phone.
+
+While you are there, the rest of the mobile input surface, none of which has a sensible
+default for a code field:
+
+```
+inputMode      "numeric" for digits, "text" otherwise — decides which keyboard opens
+autoCorrect    off      autocapitalize off      spellCheck false
+```
+
+### Splitting one value across cells
+
+The value is one thing; the cells are a rendering of it. Three behaviours follow, and all
+three are expected by everyone and implemented by almost no one:
+
+**Backspace on an empty cell does two things.** It clears the *previous* cell **and**
+moves focus there. One keystroke, one perceived action — anything less means a user
+deleting a wrong code has to alternate Backspace and Left the whole way back.
+
+**A full-length paste ignores where you were.** Filter the pasted text through the same
+rule that governs typing, then: if what survives is at least the full length, fill from
+cell 0. Pasting a complete code must not depend on which cell happened to hold focus.
+A shorter paste fills forward from the current cell.
+
+**Tab leaves the group; arrows move inside it.** Home and End go to the ends. The cells
+are one control, so they must not cost six tab stops to get past.
+
+```
+role="group" + aria-label            on the container — it is one control
+per-cell aria-label "…, character 3 of 6"   or a screen reader announces six
+                                            unlabelled text boxes
+```

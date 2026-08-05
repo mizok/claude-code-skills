@@ -450,3 +450,54 @@ toast       |dx| > 72               OR  |v| > 460 and |dx| > 20
 
 **Momentum decides *whether* you move, not *how far*.** The ±1 cap is what keeps a
 hard flick from skipping four slides.
+
+---
+
+## 9 · Rejection
+
+Everything else in this document animates something the user asked for. Rejection is the
+one motion that says **no**, and it follows different rules.
+
+```
+shake   x: [0, -5, 4, -3, 0]   0.32s   fixed-duration keyframes, ARRIVE curve
+```
+
+**It is a tween, not a spring, and that is not an oversight.** A spring models a response
+to force — the thing moved because something pushed it. Nothing pushed a rejected field.
+The shake is a *statement*, it has a script, and it has to end at exactly the same place
+it started. Handing it to a spring would let it settle differently depending on what it
+was doing beforehand, which is the one property you do not want in an error signal.
+
+Three things about the shape:
+
+- **The amplitude decays and the sequence is asymmetric** — 5, 4, 3, not 5, 5, 5. A
+  symmetric oscillation reads as a machine; a decaying one reads as a recoil.
+- **It ends on 0 explicitly.** Never rely on the animation's fill mode to put it back.
+- **It is short.** 0.32s is already at the ceiling. A long shake stops being feedback and
+  becomes a scolding.
+
+### Rejection is never carried by motion alone
+
+The shake is the fastest signal, not the only one. It fires alongside, never instead of:
+
+```
+aria-invalid on the control        the state, for anything not watching pixels
+a message in the live region       what was wrong, as a sentence (craft §6)
+a colour change                    which survives reduced motion
+focus moved to the first offender  so the fix does not require a hunt
+```
+
+Moving focus is the part most often skipped and the one that matters most on a long form.
+A rejection the user has to go looking for is a rejection that gets abandoned.
+
+**Under reduced motion the shake is dropped entirely** — not shortened, not zeroed in
+place. It is the one animation in this set with no destination, so there is no trip to
+skip and nothing to arrive: the colour, the message, the state and the focus move are
+already the whole signal. This is the exception to invariant 3's usual `duration: 0`
+treatment, and it is worth a comment so the next reader does not "fix" it.
+
+### Fire it on commit, not on keystroke
+
+A field that shakes while you are still typing an email address is punishing you for not
+having finished. Validate on blur or on submit; the only keystroke-time feedback that
+earns its place is *positive* — a checkmark once the value becomes valid.
