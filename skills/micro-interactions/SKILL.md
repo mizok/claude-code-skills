@@ -1,6 +1,6 @@
 ---
 name: micro-interactions
-description: Use when building, animating, or reviewing any interactive UI — buttons, fields, modals, drawers, toasts, tabs, dropdowns, carousels, drag/swipe/hold gestures, loading and async states — or whenever a component moves, appears, disappears, or reports progress. Enforces the last twenty percent: zero layout shift, interruptible motion, the right spring for the distance, the full gesture-abandonment surface, keyboard parity, screen-reader announcements, and reduced-motion behaviour. Framework-agnostic.
+description: Use when building, animating, or reviewing any interactive UI — buttons, fields, modals, drawers, toasts, tabs, dropdowns, carousels, drag/swipe/hold gestures, loading and async states — or whenever a component moves, appears, disappears, changes the text or number it is showing, or reports progress. Enforces the last twenty percent: zero layout shift, interruptible motion, the right spring for the distance, content that is replaced rather than rewritten in place, the full gesture-abandonment surface, keyboard parity, screen-reader announcements, and reduced-motion behaviour. Framework-agnostic.
 ---
 
 # Micro-Interactions
@@ -30,10 +30,10 @@ CSS transitions, SwiftUI, Compose.
 
 ---
 
-## The seven invariants
+## The eight invariants
 
-Any component that moves must satisfy all seven. This is the gate — if you cannot
-name how a component meets each one, it is not finished.
+Any component that moves — or whose content changes — must satisfy all eight. This is
+the gate: if you cannot name how a component meets each one, it is not finished.
 
 1. **Zero layout shift.** Every reachable state reserves its space up front.
 2. **Interruptible.** The animation resumes from where the element *currently is*,
@@ -50,12 +50,16 @@ name how a component meets each one, it is not finished.
    The behaviour is finished; the style is theirs.
 7. **Write the DOM directly when a value changes every frame.** No framework should
    re-render at 60fps to move a number.
+8. **Changing content is replaced, not mutated.** A value or label that changes writes a
+   new node beside the old one and lets the old one leave. Text rewritten in place changes
+   between two frames, which is a change nobody perceived. (Invariant 7 is the other side
+   of this: per-frame values are written precisely *because* they must not be replaced.)
 
 ---
 
 ## Before you write a line
 
-Answer these five. They decide the implementation, not the styling.
+Answer these six. They decide the implementation, not the styling.
 
 | Question | What it decides |
 |---|---|
@@ -63,6 +67,7 @@ Answer these five. They decide the implementation, not the styling.
 | **How far does the thing travel, in pixels?** | The spring. >200px → soft; 20–200px → default; <20px → tight. See below. |
 | **Is this content already in the DOM at first paint?** | Whether it gets an entrance **at all**. Prerendered content must not animate in. See `references/motion.md` §2. |
 | **Can this be abandoned mid-gesture?** | The listener set. Every abandonment path is a real path. See `references/craft.md` §4. |
+| **Does the *content* change, or only its position?** | Whether you replace or write. Changing content is never mutated in place — and if it changes every frame, it is written to the DOM, not replaced. See `references/content-change.md`. |
 | **What does a person hear who cannot see it?** | The live region, the hint, the debounce. See `references/craft.md` §6. |
 
 ---
@@ -138,6 +143,9 @@ maps to a section.
 - [ ] Click it twice, fast. Does the second click resume or restart? → motion §1
 - [ ] Trigger the longest state (longest label, biggest number, error message).
       Did anything else on the page move? → craft §1
+- [ ] Change a displayed value or label. Did the old one *leave*, or did it silently
+      become the new one? Push it through a width boundary (`9 → 10`) — did the box
+      move? → content-change §1, §4
 - [ ] Start a drag/hold, then Alt-Tab away. Is it stuck? → craft §4
 - [ ] Unplug the mouse. Can you reach and operate it? Does it announce what
       happened, once, in a sentence? → craft §5, §6
@@ -155,11 +163,12 @@ maps to a section.
 
 ## References
 
-Load the one you need; do not load all three.
+Load the one you need; do not load all four.
 
 | File | Covers |
 |---|---|
 | `references/motion.md` | Spring catalogue with damping ratios **and springless CSS/WAAPI equivalents** · when an entrance is wrong (prerendered / hydrated content) · entrance/exit values · physics-driven linear motion · velocity handover and flick thresholds · the three causes of jank · quantisation as a render budget · shared-layout animation · reduced motion |
+| `references/content-change.md` | **When the content itself changes** — a value ticking, a label swapping, text arriving, an icon morphing · replacement instead of mutation · the change identity as the headless boundary · direction as information · `em` travel in a clipped cell · the `aria-hidden` stack and the settled live region · splitting text without breaking word wrap · replaced vs. written-per-frame |
 | `references/craft.md` | Reserving space (the invisible twin) · state without `disabled` · overlays (portal, refcounted scroll lock, inert, escape stack, focus return) · the gesture abandonment surface · focus, three shapes · announcements (late, once, outcome) · async (grace, minimum, settle, rollback) · scroll containers · measurement |
 | `references/visual-language.md` | Depth as material, not borders · nested radii arithmetic · the anti-generic bans and when a ban yields · the input standard · colour semantics (accent means "the system is responding to you") · type scale · discrete cells |
 

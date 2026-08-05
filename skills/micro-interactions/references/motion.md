@@ -2,7 +2,10 @@
 
 Numbers are from a set of ~55 shipped components. They are worked values, not
 arbitrary ones — the reasoning is given so you can re-derive them for a different
-scale of interface.
+scale of interface. A handful are reconstructions rather than measurements; those
+carry a † and are called out in §1. **The reasoning is the durable part either way** —
+no number here should be copied into a different engine or a different scale without
+being re-derived.
 
 ---
 
@@ -21,6 +24,26 @@ Web Animations API, Angular Animations. They are a first-class path, not a
 consolation prize: most of this set's motion is overdamped, and an overdamped spring
 is a decelerating curve with a settle time. That is exactly what a cubic-bezier gives
 you.
+
+**Be precise about what the springless path costs you, because it is invariant 2.** A CSS
+transition retargeted mid-flight *does* continue from the element's current computed
+value — that half of "interruptible" holds. What it drops is **velocity**: the new
+transition starts from a standstill and runs its full duration again, so the element
+decelerates twice and a quick reversal reads as hesitation. Grade the requirement rather
+than assuming the worst:
+
+```
+arrives or leaves once          CSS transition.  Invariant 2 is never exercised.
+a state toggle that gets spammed  WAAPI: commitStyles() the current value, cancel,
+                                start the next animation from there.
+anything a pointer drives       A real spring. There is no substitute — velocity
+                                handover (§8) is the whole feel of a drag.
+```
+
+For the third row on a stack with no solver, do not hand-roll one: precompute the spring
+as keyframes and drive them through the Web Animations API, or take the framework-free
+`animate()` from `motion` — it is not React-bound, and it is one dependency against an
+entire class of bugs you would otherwise be writing yourself.
 
 | Name | k · c · m | ζ | **Springless equivalent** | Use |
 |---|---|---|---|---|
@@ -59,7 +82,21 @@ stiffness rises as distance falls, and mass falls with it. That relationship is 
 part worth internalising; it survives any change of engine.
 
 Worked one-offs, each of which earned its own numbers. The *reasons* port; the
-numbers are examples of the reasoning:
+numbers are examples of the reasoning.
+
+**† marks an entry with no component behind it.** The rest were taken from a named
+component in the source set and several have been re-checked against it directly —
+`SURFACE 420·36·0.9`, `CROSSFADE 260·34·0.8`, `SMALL 700·46·0.5` and `progress fill
+210·34·0.9` all appear verbatim in shipped source, so treat the main table as measured.
+The daggered entries are different: the source set contains **no toast and no upload
+component**, so those two numbers are reconstructions presented in the same voice as the
+measured ones. The reasoning attached to them is sound and worth keeping; the provenance
+is not. Re-derive them for your own surface rather than citing them as observed values.
+
+The same caveat covers two behavioural specs elsewhere in this skill with no component
+behind them: the **upload queue** (`craft.md` §7 — the concurrency-2 queue with a
+per-row `AbortController`) and the **resizable split** keyboard model (`craft.md` §5).
+Both are good designs. Neither was read off a shipped implementation.
 
 ```
 tab indicator     620 · 42 · 0.35   ζ 1.42  wide, carries three shadows; any
@@ -70,18 +107,31 @@ tooltip rise      560 · 34 · 0.6    ζ 0.93  alive without bouncing
 tooltip warm      900 · 48 · 0.5    ζ 1.14  already on screen; the trip is paid
                                             for, it only has to arrive
 dropdown open     620 · 38 · 0.6    ζ 0.99  small and close: arrive, don't travel
-toast surface     400 · 44 · 0.85   ζ 1.19  cards settle, never snap
+toast surface †   400 · 44 · 0.85   ζ 1.19  cards settle, never snap
 progress fill     210 · 34 · 0.9    ζ 1.24  a meter must not spring past the
                                             number it is reporting
-upload smooth     240 · 44 · 0.6    ζ 1.16  a spring over reported progress, so a
+upload smooth †   240 · 44 · 0.6    ζ 1.16  a spring over reported progress, so a
                                             lumpy transport reads smooth
-carousel wall     700 · 30 · 0.5    ζ 0.80  the only underdamped spring in the
-                                            set — an end is a wall, and a wall
-                                            gives and comes back
+carousel wall     700 · 30 · 0.5    ζ 0.80  an end is a wall, and a wall gives
+                                            and comes back
+flash lift        380 · 26 · 0.7    ζ 0.80  a value's container swelling to 1.05
+                                            and settling — alive, not bouncy
+flash glyph       640 · 22 · 0.7    ζ 0.52  the arrow confirming a direction: it
+                                            is punctuation, and punctuation lands
+                                            like a stamp
 ```
 
-Note the last one. Underdamped is not banned; it is *earned*, once, where the
-overshoot is the information.
+**Underdamped is not banned — it is *justified*, and the justification is always that
+the overshoot carries information.** Note how the ratio tracks the job rather than the
+distance: a surface that must not look like it is correcting itself sits above 1
+(tab indicator 1.42, step rail head 1.24); a surface that should feel alive sits just
+under (SURFACE 0.93, tooltip rise 0.93, dropdown 0.99); and a small glyph whose whole
+purpose is to *arrive emphatically* can go as low as 0.52, because there is no layout
+riding on it and nothing to correct.
+
+The failure mode is an underdamped spring on something **large or load-bearing**. An
+overshooting panel reads as a mis-hit; an overshooting progress fill claims a number it
+then walks back. Ask what the overshoot is *saying* before you allow it.
 
 ### The three jobs left for a CSS transition
 
@@ -234,7 +284,13 @@ reported value    el.setAttribute("aria-valuenow", "42")          imperative
 committed value   setState(42)                                    ONLY when the drag ends
 ```
 
-Three channels, three cadences, one render. A scroll-driven component can go further:
+Three channels, three cadences, one render. **This is the opposite pole from
+`content-change.md`, and the boundary matters:** a value that changes every frame is
+written, a value that changes discretely and meaningfully is *replaced*. Picking the
+wrong one gives you either a smear (rolling a 60fps readout) or a change nobody saw
+(rewriting a price tick in place).
+
+A scroll-driven component can go further:
 derive every value from the scroll position with a transform, and the framework
 renders once, at the threshold.
 
